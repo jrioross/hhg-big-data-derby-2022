@@ -57,19 +57,18 @@ def get_position(longitudinal_distances):
     position = (np.array(longitudinal_distances) >= 0).sum()
     return np.nan if position == 0 else position
 
-def get_speed_and_position_columns(df):
-
+def get_speed_angle_cols(df):
     df = (df.sort_values(['track_id', 
-                         'race_date', 
-                         'race_number', 
-                         'program_number', 
-                         'trakus_index'])
-            .reset_index(drop=True)
-        )
+                    'race_date', 
+                    'race_number', 
+                    'program_number', 
+                    'trakus_index'])
+    .reset_index(drop=True)
+    )
 
     # convert lat/lon to UTM coordinates (meters)
     df['xy'] = (np.array(
-                        utm.from_latlon(df['latitude'].values, 
+                        utm.from_latlon(df['latitude'].values,
                                         df['longitude'].values
                                         )
                                         [:2]
@@ -80,9 +79,9 @@ def get_speed_and_position_columns(df):
 
     # get speeds and add column to df
     df['speed'] = (df.groupby(['track_id', 
-                              'race_date', 
-                              'race_number', 
-                              'program_number']
+                            'race_date', 
+                            'race_number', 
+                            'program_number']
                             )
                     ['xy']
                     .progress_transform(get_speed)
@@ -90,12 +89,12 @@ def get_speed_and_position_columns(df):
 
     # get turning angles and add column to df
     df['turning_angle'] = (df.groupby(['track_id', 
-                                      'race_date', 
-                                      'race_number', 
-                                      'program_number']
+                                    'race_date', 
+                                    'race_number', 
+                                    'program_number']
                                     )
-                              ['xy']
-                              .progress_transform(get_turning_angle)
+                            ['xy']
+                            .progress_transform(get_turning_angle)
                         )
 
     # prepare df to compare subsequent trakus id lat/lon and thus get distances between points
@@ -103,40 +102,41 @@ def get_speed_and_position_columns(df):
 
     ## copy df
     df_prev = df[['track_id', 
-                  'race_date', 
-                  'race_number', 
-                  'trakus_index', 
-                  'program_number', 
-                  'xy']].copy()
+                'race_date', 
+                'race_number', 
+                'trakus_index', 
+                'program_number', 
+                'xy']].copy()
+
     ## add one to index in anticipation of merge
     df_prev['trakus_index'] = df_prev['trakus_index'] + 1
 
     ## merge with offset indices
     df = pd.merge(df, 
-                  df_prev, 
-                  on=['track_id', 
-                      'race_date', 
-                      'race_number', 
-                      'program_number', 
-                      'trakus_index'], 
-                  suffixes=['', '_prev'], 
-                  how='left'
+                df_prev, 
+                on=['track_id', 
+                    'race_date', 
+                    'race_number', 
+                    'program_number', 
+                    'trakus_index'], 
+                suffixes=['', '_prev'], 
+                how='left'
                 )
 
     # create column with lat/lon pairs (list of lat/lon arrays)
     df['xy_pair'] = df.progress_apply(lambda row: [np.array(row['xy_prev']), 
-                                                   np.array(row['xy'])], 
-                                     axis=1
-                                     )
+                                                np.array(row['xy'])], 
+                                    axis=1
+                                    )
 
     # get lateral distances and add column to df
     df['lateral_distances'] = (df.groupby(['track_id', 
-                                          'race_date', 
-                                          'race_number', 
-                                          'trakus_index']
+                                        'race_date', 
+                                        'race_number', 
+                                        'trakus_index']
                                         )
-                                 ['xy_pair']
-                                 .progress_transform(get_lateral_distances)
+                                ['xy_pair']
+                                .progress_transform(get_lateral_distances)
                             )
 
     # get lateral distances and add column to df
@@ -145,9 +145,10 @@ def get_speed_and_position_columns(df):
                                                 'race_number', 
                                                 'trakus_index']
                                             )
-                                      ['xy_pair']
-                                      .progress_transform(get_longitudinal_distances)
+                                    ['xy_pair']
+                                    .progress_transform(get_longitudinal_distances)
                                 )
+
     # get position and add column to df
     df['position'] = df['longitudinal_distances'].progress_apply(get_position)
 
